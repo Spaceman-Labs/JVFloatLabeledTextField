@@ -192,8 +192,13 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
 
 - (void)adjustTextContainerInsetTop
 {
-    self.textContainerInset = UIEdgeInsetsMake(self.startingTextContainerInsetTop + _floatingLabel.font.lineHeight + _floatingLabelYPadding.floatValue,
-                                               self.textContainerInset.left, self.textContainerInset.bottom, self.textContainerInset.right) ;
+	CGFloat topInset = self.startingTextContainerInsetTop + _floatingLabel.font.lineHeight + _floatingLabelYPadding.floatValue;
+	CGFloat insetDelta = self.textContainerInset.top - topInset;
+	
+    self.textContainerInset = UIEdgeInsetsMake(topInset,
+                                               self.textContainerInset.left,
+											   self.textContainerInset.bottom + insetDelta,
+											   self.textContainerInset.right) ;
 }
 
 - (void)setLabelOriginForTextAlignment
