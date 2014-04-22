@@ -8,13 +8,8 @@
 
 #import "JVFloatLabeledTextView.h"
 
-const static CGFloat JVFloatLabeledTextViewDefaultLeftInset = 5.0f; // iOS default
-const static CGFloat JVFloatLabeledTextViewDefaultTopInset = 8.0f; // iOS default
-
-const static CGFloat JVFloatLabeledTextViewDefaultLeft6Inset = 8.0f; // iOS default
-const static CGFloat JVFloatLabeledTextViewDefaultTop6Inset = 12.0f; // iOS default
-
-const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iOS default
+#define kFloatingLabelShowAnimationDuration 0.3f
+#define kFloatingLabelHideAnimationDuration 0.3f
 
 @interface JVFloatLabeledTextView ()
 
@@ -69,7 +64,9 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
     _floatingLabel.font = [UIFont boldSystemFontOfSize:12.0f];
     _floatingLabelTextColor = [UIColor grayColor];
     _animateEvenIfNotFirstResponder = NO;
-    
+    _floatingLabelShowAnimationDuration = kFloatingLabelShowAnimationDuration;
+    _floatingLabelHideAnimationDuration = kFloatingLabelHideAnimationDuration;
+
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(textDidChange:)
                                                  name:UITextViewTextDidChangeNotification
@@ -106,6 +103,16 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
     [_placeholderLabel sizeToFit];
     
     _floatingLabel.text = placeholder;
+    [_floatingLabel sizeToFit];
+}
+
+- (void)setPlaceholder:(NSString *)placeholder floatingTitle:(NSString *)floatingTitle
+{
+    _placeholder = placeholder;
+    _placeholderLabel.text = placeholder;
+    [_placeholderLabel sizeToFit];
+
+    _floatingLabel.text = floatingTitle;
     [_floatingLabel sizeToFit];
 }
 
@@ -156,7 +163,7 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
     };
     
     if (animated || _animateEvenIfNotFirstResponder) {
-        [UIView animateWithDuration:0.3f
+        [UIView animateWithDuration:_floatingLabelShowAnimationDuration
                               delay:0.0f
                             options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveEaseOut
                          animations:showBlock
@@ -179,7 +186,7 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
     };
     
     if (animated || _animateEvenIfNotFirstResponder) {
-        [UIView animateWithDuration:0.3f
+        [UIView animateWithDuration:_floatingLabelHideAnimationDuration
                               delay:0.0f
                             options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveEaseIn
                          animations:hideBlock
@@ -198,17 +205,23 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
 
 - (void)setLabelOriginForTextAlignment
 {
-    CGFloat originX = [self textRect].origin.x;
+    CGFloat floatingLabelOriginX = [self textRect].origin.x;
+    CGFloat placeholderLabelOriginX = floatingLabelOriginX;
     
     if (self.textAlignment == NSTextAlignmentCenter) {
-        originX = (self.frame.size.width/2) - (_floatingLabel.frame.size.width/2);
+        floatingLabelOriginX = (self.frame.size.width/2) - (_floatingLabel.frame.size.width/2);
+        placeholderLabelOriginX = (self.frame.size.width/2) - (_placeholderLabel.frame.size.width/2);
     }
     else if (self.textAlignment == NSTextAlignmentRight) {
-        originX = self.frame.size.width - _floatingLabel.frame.size.width;
+        floatingLabelOriginX = self.frame.size.width - _floatingLabel.frame.size.width;
+        placeholderLabelOriginX = self.frame.size.width - _placeholderLabel.frame.size.width - self.textContainerInset.right;
     }
     
-    _floatingLabel.frame = CGRectMake(originX, _floatingLabel.frame.origin.y,
+    _floatingLabel.frame = CGRectMake(floatingLabelOriginX, _floatingLabel.frame.origin.y,
                                       _floatingLabel.frame.size.width, _floatingLabel.frame.size.height);
+    
+    _placeholderLabel.frame = CGRectMake(placeholderLabelOriginX, _placeholderLabel.frame.origin.y,
+                                         _placeholderLabel.frame.size.width, _placeholderLabel.frame.size.height);
 }
 
 - (CGRect)textRect
@@ -223,7 +236,8 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
     return rect;
 }
 
-- (void) setFloatingLabelFont:(UIFont *)floatingLabelFont {
+- (void)setFloatingLabelFont:(UIFont *)floatingLabelFont
+{
     _floatingLabelFont = floatingLabelFont;
     _floatingLabel.font = (_floatingLabelFont ? _floatingLabelFont : [UIFont boldSystemFontOfSize:12.0f]);
     self.placeholder = self.placeholder; // Force the label to lay itself out with the new font.
@@ -265,6 +279,19 @@ const static CGFloat JVFloatLabeledTextViewDefaultRetinaInsetNudge = 0.5f; // iO
 {
     self.placeholderLabel.alpha = [self.text length] > 0 ? 0.0f : 1.0f;
     [self layoutSubviews];
+}
+
+#pragma mark - Accessibility
+
+- (NSString *)accessibilityLabel
+{
+    NSString *accessibilityLabel;
+    if ([self.text isEqualToString:@""] == NO) {
+        accessibilityLabel = [NSString stringWithFormat:@"%@ %@",[self.floatingLabel accessibilityLabel],self.text];
+    } else {
+        accessibilityLabel = [self.floatingLabel accessibilityLabel];
+    }
+    return accessibilityLabel;
 }
 
 @end
