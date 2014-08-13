@@ -122,8 +122,11 @@
     [self adjustTextContainerInsetTop];
     
     CGRect textRect = [self textRect];
-    
-    _placeholderLabel.frame = CGRectMake(textRect.origin.x, textRect.origin.y,
+	
+	CGFloat yOffset = floorf(textRect.origin.y);
+	CGFloat xOffset = floorf(textRect.origin.x);
+	
+    _placeholderLabel.frame = CGRectMake(xOffset, yOffset,
                                          _placeholderLabel.frame.size.width, _placeholderLabel.frame.size.height);
     [self setLabelOriginForTextAlignment];
     
