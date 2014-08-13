@@ -7,6 +7,7 @@
 //
 
 #import "JVFloatLabeledTextView.h"
+#import "NSString+TextDirectionality.h"
 
 #define kFloatingLabelShowAnimationDuration 0.3f
 #define kFloatingLabelHideAnimationDuration 0.3f
@@ -68,7 +69,7 @@
     _floatingLabelHideAnimationDuration = kFloatingLabelHideAnimationDuration;
 
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(textDidChange:)
+                                             selector:@selector(layoutSubviews)
                                                  name:UITextViewTextDidChangeNotification
                                                object:self];
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -125,7 +126,8 @@
 	
 	CGFloat yOffset = floorf(textRect.origin.y);
 	CGFloat xOffset = floorf(textRect.origin.x);
-	
+	    
+    _placeholderLabel.alpha = [self.text length] > 0 ? 0.0f : 1.0f;
     _placeholderLabel.frame = CGRectMake(xOffset, yOffset,
                                          _placeholderLabel.frame.size.width, _placeholderLabel.frame.size.height);
     [self setLabelOriginForTextAlignment];
@@ -160,7 +162,7 @@
     void (^showBlock)() = ^{
         _floatingLabel.alpha = 1.0f;
         _floatingLabel.frame = CGRectMake(_floatingLabel.frame.origin.x,
-                                          2.0f,
+                                          _floatingLabelYPadding,
                                           _floatingLabel.frame.size.width,
                                           _floatingLabel.frame.size.height);
     };
@@ -182,7 +184,7 @@
     void (^hideBlock)() = ^{
         _floatingLabel.alpha = 0.0f;
         _floatingLabel.frame = CGRectMake(_floatingLabel.frame.origin.x,
-                                          _floatingLabel.font.lineHeight + _floatingLabelYPadding.floatValue,
+                                          _floatingLabel.font.lineHeight + _placeholderYPadding,
                                           _floatingLabel.frame.size.width,
                                           _floatingLabel.frame.size.height);
         
@@ -202,13 +204,8 @@
 
 - (void)adjustTextContainerInsetTop
 {
-	CGFloat topInset = self.startingTextContainerInsetTop + _floatingLabel.font.lineHeight + _floatingLabelYPadding.floatValue;
-	CGFloat insetDelta = self.textContainerInset.top - topInset;
-	
-    self.textContainerInset = UIEdgeInsetsMake(topInset,
-                                               self.textContainerInset.left,
-											   self.textContainerInset.bottom + insetDelta,
-											   self.textContainerInset.right) ;
+    self.textContainerInset = UIEdgeInsetsMake(self.startingTextContainerInsetTop + _floatingLabel.font.lineHeight + _placeholderYPadding,
+                                               self.textContainerInset.left, self.textContainerInset.bottom, self.textContainerInset.right) ;
 }
 
 - (void)setLabelOriginForTextAlignment
@@ -223,6 +220,12 @@
     else if (self.textAlignment == NSTextAlignmentRight) {
         floatingLabelOriginX = self.frame.size.width - _floatingLabel.frame.size.width;
         placeholderLabelOriginX = self.frame.size.width - _placeholderLabel.frame.size.width - self.textContainerInset.right;
+    } else if (self.textAlignment == NSTextAlignmentNatural) {
+        JVTextDirection baseDirection = [_floatingLabel.text getBaseDirection];
+        if (baseDirection == JVTextDirectionRightToLeft) {
+            floatingLabelOriginX = self.frame.size.width - _floatingLabel.frame.size.width;
+            placeholderLabelOriginX = self.frame.size.width - _placeholderLabel.frame.size.width - self.textContainerInset.right;
+        }
     }
     
     _floatingLabel.frame = CGRectMake(floatingLabelOriginX, _floatingLabel.frame.origin.y,
@@ -255,17 +258,10 @@
 
 + (UIColor *)defaultiOSPlaceholderColor
 {
-    return [UIColor colorWithWhite:0.702f alpha:1.0f];
+    return [[UIColor lightGrayColor] colorWithAlphaComponent:0.65f];
 }
 
 #pragma mark - UITextView
-
-- (void)setText:(NSString *)text
-{
-    [super setText:text];
-    self.placeholderLabel.alpha = [self.text length] > 0 ? 0.0f : 1.0f;
-    [self layoutSubviews];
-}
 
 - (void)setTextAlignment:(NSTextAlignment)textAlignment
 {
@@ -278,14 +274,6 @@
 {
     [super setFont:font];
     self.placeholderLabel.font = self.font;
-    [self layoutSubviews];
-}
-
-#pragma mark - Notifications
-
-- (void)textDidChange:(NSNotification *)notification
-{
-    self.placeholderLabel.alpha = [self.text length] > 0 ? 0.0f : 1.0f;
     [self layoutSubviews];
 }
 
